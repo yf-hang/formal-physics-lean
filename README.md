@@ -5,8 +5,7 @@ This Lean file formalizes a standard alternating subset expansion for iterated f
 The main identity is that applying a finite sequence of difference operators to a function `f` is equivalent to summing over all sublists, interpreted as subsets, with alternating signs:
 
 $$
-\prod_i \Delta_{y_i} f(D)
-  = \sum_{S \subseteq YY} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right).
+\prod_i \Delta_{y_i} f(D) = \sum_{S \subseteq YY} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right).
 $$
 
 Here the one-step finite difference is defined by
@@ -93,8 +92,7 @@ $$
 By the induction hypothesis, these two terms become two subset sums over `ys`:
 
 $$
-\sum_{S \subseteq ys} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right)
-  - \sum_{S \subseteq ys} (-1)^{|S|} f\left(D + h + \sum_{y \in S} y\right)
+\sum_{S \subseteq ys} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right) - \sum_{S \subseteq ys} (-1)^{|S|} f\left(D + h + \sum_{y \in S} y\right)
 $$
 
 On the other hand, every sublist of `h :: ys` is either:
