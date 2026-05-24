@@ -87,8 +87,7 @@ For the empty list, there are no difference operators, so both sides reduce to `
 For the inductive step, suppose the list is `h :: ys`. Applying the first finite difference gives
 
 $$
-\mathrm{iteratedFiniteDiff}(ys, f)(D)
-  - \mathrm{iteratedFiniteDiff}(ys, f)(D + h)
+\mathrm{iteratedFiniteDiff}(ys, f)(D) - \mathrm{iteratedFiniteDiff}(ys, f)(D + h)
 $$
 
 By the induction hypothesis, these two terms become two subset sums over `ys`:
