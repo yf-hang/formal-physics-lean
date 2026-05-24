@@ -14,7 +14,7 @@ $$
 \Delta_h f(D) = f(D) - f(D + h).
 $$
 
-In the Lean development, the finite set `\boldsymbol{Y}` is represented by an ordered list `ys`, and its subsets are represented by `ys.sublists`. The order inherited from the list is only used to compute the finite sum of shifts.
+In the Lean development, the finite set `Y` is represented by an ordered list `ys`, and its subsets are represented by `ys.sublists`. The order inherited from the list is only used to compute the finite sum of shifts.
 
 ## Main Definitions
 
@@ -155,7 +155,7 @@ $$
 
 ## Examples
 
-For $\boldsymbol{Y}=\{y_1,y2\}$:
+For $\boldsymbol{Y}=\{y_1,y_2\}$:
 ```math
 \begin{aligned}
 \prod_{i=1}^{2}\Delta_{y_i}\left[\frac{1}{D}\right]
