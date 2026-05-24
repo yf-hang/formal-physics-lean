@@ -87,15 +87,15 @@ For the empty list, there are no difference operators, so both sides reduce to `
 For the inductive step, suppose the list is `h :: ys`. Applying the first finite difference gives
 
 $$
-\operatorname{iteratedFiniteDiff}\ ys\ f\ D
-  - \operatorname{iteratedFiniteDiff}\ ys\ f\ (D + h).
+\mathrm{iteratedFiniteDiff}(ys, f)(D)
+  - \mathrm{iteratedFiniteDiff}(ys, f)(D + h)
 $$
 
 By the induction hypothesis, these two terms become two subset sums over `ys`:
 
 $$
-\sum_{S \subseteq ys} (-1)^{|S|} f\left(D + \sum S\right)
-  - \sum_{S \subseteq ys} (-1)^{|S|} f\left(D + h + \sum S\right).
+\sum_{S \subseteq ys} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right)
+  - \sum_{S \subseteq ys} (-1)^{|S|} f\left(D + h + \sum_{y \in S} y\right)
 $$
 
 On the other hand, every sublist of `h :: ys` is either:
@@ -106,7 +106,7 @@ On the other hand, every sublist of `h :: ys` is either:
 The second case has one extra element, so its sign gains a factor of `-1`:
 
 $$
-(-1)^{|h :: S|} = (-1)^{|S| + 1} = -(-1)^{|S|}.
+(-1)^{|S| + 1} = -(-1)^{|S|}
 $$
 
 Thus the subset expansion over `h :: ys` matches exactly the difference of the two subset sums above.
