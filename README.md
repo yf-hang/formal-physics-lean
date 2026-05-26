@@ -84,8 +84,7 @@ $$
 We prove the identity
 
 $$
-\mathrm{iteratedFiniteDiff}\; ys\; f\; D 
-    = \mathrm{finiteDiffExpansion}\; ys\; f\; D
+\mathrm{iteratedFiniteDiff}\; ys\; f\; D  = \mathrm{finiteDiffExpansion}\; ys\; f\; D
 $$
 
 by induction on the list `ys`. In mathematical notation, this is the statement
