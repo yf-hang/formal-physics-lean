@@ -74,38 +74,105 @@ In mathematical notation:
 
 $$
 \prod_i \Delta_{y_i} f(D)
-  = \sum_{S \subseteq \mathbf{Y}} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right).
+  = \sum_{S \subseteq \mathbf{Y}} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right)
 $$
 
 ## Proof Idea
 
-The proof proceeds by induction on the list `ys`.
-
-For the empty list, there are no difference operators, so both sides reduce to `f D`.
-
-For the inductive step, suppose the list is `h :: ys`. Applying the first finite difference gives
+We prove the identity
 
 $$
-\mathrm{iteratedFiniteDiff}(ys, f)(D) - \mathrm{iteratedFiniteDiff}(ys, f)(D + h)
+\mathrm{iteratedFiniteDiff}\; ys\; f\; D 
+    = \mathrm{finiteDiffExpansion}\; ys\; f\; D
 $$
 
-By the induction hypothesis, these two terms become two subset sums over `ys`:
+by induction on the list `ys`. In mathematical notation, this is the statement
 
 $$
-\sum_{S \subseteq ys} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right) - \sum_{S \subseteq ys} (-1)^{|S|} f\left(D + h + \sum_{y \in S} y\right)
+\prod_i \Delta_{y_i} f(D) = \sum_{S \subseteq \mathbf{Y}} (-1)^{|S|} f \left(D+\sum_{y\in S}y\right)
 $$
 
-On the other hand, every sublist of `h :: ys` is either a sublist `S` of `ys`, not containing `h`; or a sublist `h :: S`, containing `h`.
+where the sum is over the sublists of `ys`. These sublists play the role of subsets of the finite set of shifts.
 
-The second case has one extra element, so its sign gains a factor of `-1`:
+For the empty list, there are no finite-difference operators. Hence the left-hand side is simply `f D`. On the right-hand side, the only sublist of `[]` is `[]` itself, whose length and sum are both zero. Therefore the subset expansion reduces to
 
 $$
-(-1)^{|S| + 1} = -(-1)^{|S|}
+(-1)^0 f(D+0)=f(D)
 $$
 
-Thus the subset expansion over `h :: ys` matches exactly the difference of the two subset sums above.
+This is the base case of the induction and is discharged in Lean by simplifying the definitions of `iteratedFiniteDiff` and `finiteDiffExpansion`.
 
-The auxiliary lemmas about list sums are used to reorganize sums over lists produced by `flatMap` and to rewrite sums of negated terms.
+For the inductive step, write the list as `h :: ys`. The induction hypothesis says that the identity already holds for the shorter list `ys`. In Lean, the induction is performed with `generalizing D`, so the induction hypothesis is available for any argument, not only for the original `D`. This is important because the proof needs to use the hypothesis both at `D` and at `D+h`.
+
+By the definition of `iteratedFiniteDiff`, applying the first finite-difference operator gives
+
+$$
+\mathrm{iteratedFiniteDiff}\; ys\; f\; D
+-
+\mathrm{iteratedFiniteDiff}\; ys\; f\; (D+h).
+$$
+
+The induction hypothesis is then applied to both terms. In Lean this is the step
+
+```lean
+rw [ih D, ih (D + h)]
+```
+
+which rewrites the two terms as subset expansions over the shorter list `ys`:
+
+$$
+\sum_{S \in ys.\mathrm{sublists}} (-1)^{|S|} f \left(D+\sum_{y\in S}y\right)
+    - \sum_{S \in ys.\mathrm{sublists}} (-1)^{|S|} f \left(D+h+\sum_{y\in S}y\right)
+$$
+
+It remains to compare this expression with the subset expansion for the longer list `h :: ys`. Every sublist of `h :: ys` is obtained in exactly one of two ways: either the initial element `h` is not selected, in which case the sublist is a sublist `S` of `ys`; or the initial element `h` is selected, in which case the sublist has the form `h :: S`, where `S` is a sublist of `ys`. This is precisely the decomposition implemented by
+
+```lean
+List.sublists_cons
+```
+
+Equivalently, Lean rewrites the sublists of `h :: ys` as
+
+```lean
+ys.sublists.flatMap (fun S => [S, h :: S])
+```
+
+This expresses the fact that, for every sublist `S` of `ys`, there are two corresponding sublists of `h :: ys`:
+
+```lean
+S
+h :: S
+```
+
+For each sublist `S` of `ys`, the sublist `S` itself contributes the term
+
+$$
+(-1)^{|S|} f \left(D+\sum_{y\in S}y\right)
+$$
+
+The corresponding sublist `h :: S` has length `|S|+1` and sum
+
+$$
+h+\sum_{y\in S}y
+$$
+
+Hence it contributes
+
+$$
+(-1)^{|S|+1} f\left(D+h+\sum_{y\in S}y\right) 
+    = - (-1)^{|S|} f\left(D+h+\sum_{y\in S}y\right)
+$$
+
+Thus the expansion over all sublists of `h :: ys` becomes
+
+$$
+\sum_{S \in ys.\mathrm{sublists}} (-1)^{|S|} f\left(D+\sum_{y\in S}y\right) 
+    - \sum_{S \in ys.\mathrm{sublists}} (-1)^{|S|} f \left(D+h+\sum_{y\in S}y\right)
+$$
+
+which is exactly the expression obtained from the induction hypothesis. This proves the inductive step.
+
+The auxiliary lemmas are used only to reorganize the list sums appearing in this comparison. The lemma `list_sum_flatMap_pair` separates the two contributions produced by `flatMap`, corresponding to the two choices `S` and `h :: S`. The lemma `list_sum_map_neg` rewrites a sum of negated terms as the negative of a sum, allowing the contribution with the extra factor of `-1` to be written as the second subtractive term.
 
 ## Specialization to `1 / D`
 
