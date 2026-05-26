@@ -1,7 +1,3 @@
-# TwoSiteBoolean
-
-This project formalizes two equivalent descriptions of the finite-difference expansion used for two-site Boolean-lattice wavefunction coefficients.
-
 ## 1. Finite-Difference Expansion
 
 This Lean file formalizes a standard alternating subset expansion for iterated finite differences.
