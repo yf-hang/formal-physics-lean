@@ -1,12 +1,14 @@
 # Finite-Difference Expansion
 
-This Lean file formalizes a standard alternating subset expansion for iterated finite differences, which is useful in the analysis of cosmology wavefunctions.
+This Lean file formalizes a standard alternating subset expansion for iterated finite differences.
 
 The main identity is that applying a finite sequence of difference operators to a function `f` is equivalent to summing over all sublists, interpreted as subsets, with alternating signs:
 
 $$
 \prod_i \Delta_{y_i} f(D) = \sum_{S \subseteq \mathbf{Y}} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right)
 $$
+
+which is useful in the analysis of cosmology wavefunctions under loop level.
 
 Here the one-step finite difference is defined by
 
