@@ -1,3 +1,7 @@
+# TwoSiteBooleanLattice
+
+This project formalizes two equivalent descriptions of the finite-difference expansion used for studying Boolean-lattice formalization of two-site $\ell$-loop cosmological wavefunction.
+
 ## 1. Finite-Difference Expansion
 
 This Lean file formalizes a standard alternating subset expansion for iterated finite differences.
@@ -310,7 +314,7 @@ private theorem chainProduct_sub_shift_eq
 This is the Lean version of the telescoping lemma in the algebraic proof. In mathematical notation:
 
 $$
-\prod_{r=0}^{M}\frac{1}{D+\sigma_r} - \prod_{r=0}^{M}\frac{1}{D+h+\sigma_r} = h\sum_{j=0}^{M} \left(\prod_{r=0}^{j}\frac{1}{D+\sigma_r}\right) \left(\prod_{r=j}^{M}\frac{1}{D+h+\sigma_r}\right).
+\prod_{r=0}^{M}\frac{1}{D+\sigma_r} - \prod_{r=0}^{M}\frac{1}{D+h+\sigma_r} = h\sum_{j=0}^{M} \left(\prod_{r=0}^{j}\frac{1}{D+\sigma_r}\right) \left(\prod_{r=j}^{M}\frac{1}{D+h+\sigma_r} \right)
 $$
 
 The right-hand side inserts the new shift `h` into every possible position of the chain. In Lean this insertion is encoded by:
