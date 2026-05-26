@@ -7,12 +7,12 @@ open scoped BigOperators
 /-
 This file formalizes the finite-difference expansion
 
-  ∏ᵢ Δ_{yᵢ} (1 / D) = ∑_{S ⊆ YY} (-1) ^ |S| / D_S,
+  ∏ᵢ Δ_{yᵢ} (1 / D) = ∑_{S ⊆ \mathbf{Y}} (-1) ^ |S| / D_S,
 
 where Δ_y f(D) = f(D) - f(D + y) and D_S = D + ∑_{y ∈ S} y.
 
-The finite set YY is represented by an ordered list `ys`.  Its sublists
-enumerate the subsets of YY, with the inherited order used only to compute
+The finite set \mathbf{Y} is represented by an ordered list `ys`.  Its sublists
+enumerate the subsets of \mathbf{Y}, with the inherited order used only to compute
 the sum of shifts.
 -/
 
@@ -45,7 +45,7 @@ def iteratedFiniteDiff {A K : Type*} [Add A] [Sub K]
 
 /--
 The alternating subset expansion for an arbitrary function `f`.
-Here sublists of `ys` represent the subsets `S ⊆ YY`.
+Here sublists of `ys` represent the subsets `S ⊆ \mathbf{Y}`.
 -/
 def finiteDiffExpansion {A K : Type*} [AddCommMonoid A] [CommRing K]
     (ys : List A) (f : A → K) (D : A) : K :=
@@ -53,8 +53,7 @@ def finiteDiffExpansion {A K : Type*} [AddCommMonoid A] [CommRing K]
 
 /--
 General finite-difference identity:
-
-`∏ᵢ Δ_{yᵢ} f(D) = ∑_{S ⊆ YY} (-1)^|S| f(D + ∑_{y∈S} y)`.
+`∏ᵢ Δ_{yᵢ} f(D) = ∑_{S ⊆ \mathbf{Y}} (-1)^|S| f(D + ∑_{y∈S} y)`.
 -/
 theorem iteratedFiniteDiff_eq_sum_subsets
     {A K : Type*} [AddCommMonoid A] [CommRing K]
@@ -96,11 +95,11 @@ def shiftedD {K : Type*} [Add K] [Zero K] (D : K) (S : List K) : K :=
   D + S.sum
 
 /--
-The formula from `2sitebool.tex`:
+Application of the finite-difference expansion to the function `f(D) = 1 / D`, yielding
 
-`∏ᵢ Δ_{yᵢ} (1 / D) = ∑_{S ⊆ YY} (-1)^|S| / D_S`.
+`∏ᵢ Δ_{yᵢ} (1 / D) = ∑_{S ⊆ \mathbf{Y}} (-1)^|S| / D_S`.
 
-In this Lean statement, `ys.sublists` enumerates the subsets `S ⊆ YY`.
+In this Lean statement, `ys.sublists` enumerates the subsets `S ⊆ Y`.
 -/
 theorem finiteDiff_inv_eq_sum_subsets
     {K : Type*} [Field K] (ys : List K) (D : K) :
