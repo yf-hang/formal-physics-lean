@@ -3,13 +3,17 @@
 This Lean file formalizes a standard alternating subset expansion for iterated finite differences, which is useful in the analysis of cosmology wavefunctions.
 
 The main identity is that applying a finite sequence of difference operators to a function `f` is equivalent to summing over all sublists, interpreted as subsets, with alternating signs:
+
 $$
 \prod_i \Delta_{y_i} f(D) = \sum_{S \subseteq \mathbf{Y}} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right)
 $$
+
 Here the one-step finite difference is defined by
+
 $$
 \Delta_h f(D) = f(D) - f(D + h)
 $$
+
 In the Lean development, the finite set $\mathbf{Y}$ is represented by an ordered list `ys`, and its subsets $S$ are represented by `ys.sublists`. The order inherited from the list is only used to compute the finite sum of shifts.
 
 ## Main Definitions
@@ -22,6 +26,7 @@ def finiteDiff {A K : Type*} [Add A] [Sub K] (h : A) (f : A -> K) : A -> K :=
 ```
 
 This represents the finite-difference operator:
+
 $$
 \Delta_h f(D) = f(D) - f(D + h).
 $$
@@ -35,6 +40,7 @@ def iteratedFiniteDiff {A K : Type*} [Add A] [Sub K]
 ```
 
 For a list `ys = [y1, y2, ..., yn]`, this corresponds to
+
 $$
 \Delta_{y_1} \Delta_{y_2} \cdots \Delta_{y_n} f
 $$
@@ -48,6 +54,7 @@ def finiteDiffExpansion {A K : Type*} [AddCommMonoid A] [CommRing K]
 ```
 
 This is the rhs of the expansion:
+
 $$
 \sum_{S \subseteq \mathbf{Y}} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right)
 $$
@@ -77,11 +84,13 @@ The proof proceeds by induction on the list `ys`.
 For the empty list, there are no difference operators, so both sides reduce to `f D`.
 
 For the inductive step, suppose the list is `h :: ys`. Applying the first finite difference gives
+
 $$
 \mathrm{iteratedFiniteDiff}(ys, f)(D) - \mathrm{iteratedFiniteDiff}(ys, f)(D + h)
 $$
 
 By the induction hypothesis, these two terms become two subset sums over `ys`:
+
 $$
 \sum_{S \subseteq ys} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right) - \sum_{S \subseteq ys} (-1)^{|S|} f\left(D + h + \sum_{y \in S} y\right)
 $$
@@ -89,6 +98,7 @@ $$
 On the other hand, every sublist of `h :: ys` is either a sublist `S` of `ys`, not containing `h`; or a sublist `h :: S`, containing `h`.
 
 The second case has one extra element, so its sign gains a factor of `-1`:
+
 $$
 (-1)^{|S| + 1} = -(-1)^{|S|}
 $$
@@ -100,6 +110,7 @@ The auxiliary lemmas about list sums are used to reorganize sums over lists prod
 ## Specialization to `1 / D`
 
 The file then specializes the general identity to the function:
+
 $$
 f(D) = \frac{1}{D}
 $$
@@ -112,6 +123,7 @@ def shiftedD {K : Type*} [Add K] [Zero K] (D : K) (S : List K) : K :=
 ```
 
 This represents
+
 $$
 D_S = D + \sum_{y \in S} y
 $$
@@ -126,11 +138,14 @@ theorem finiteDiff_inv_eq_sum_subsets
 ```
 
 Mathematically, this is
+
 $$
 \prod_i \Delta_{y_i} \left(\frac{1}{D}\right)
   = \sum_{S \subseteq \mathbf{Y}} \frac{(-1)^{|S|}}{D_S}
 $$
+
 where
+
 $$
 D_S = D + \sum_{y \in S} y
 $$
