@@ -108,8 +108,7 @@ For the inductive step, write the list as `h :: ys`. The induction hypothesis sa
 By the definition of `iteratedFiniteDiff`, applying the first finite-difference operator gives
 
 $$
-\mathrm{iteratedFiniteDiff}\; ys\; f\; D
-  - \mathrm{iteratedFiniteDiff}\; ys\; f\; (D+h).
+\mathrm{iteratedFiniteDiff} ys f D - \mathrm{iteratedFiniteDiff} ys f (D+h)
 $$
 
 The induction hypothesis is then applied to both terms. In Lean this is the step
