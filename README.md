@@ -2,6 +2,8 @@
 
 This project formalizes two equivalent descriptions of the finite-difference expansion used for studying Boolean-lattice formalization of two-site $\ell$-loop cosmological wavefunction.
 
+The relevant paper: "A Boolean-Lattice Perspective for All-Loop Two-Site Cosmological Wavefunction", [arXiv:2605.30797](https://arxiv.org/abs/2605.30797)
+
 ## 1. Finite-Difference Expansion
 
 This Lean file formalizes a standard alternating subset expansion for iterated finite differences.
