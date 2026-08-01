@@ -118,14 +118,9 @@ so the induction hypothesis is available at any argument $D$. In particular, it 
 
 Expanding the first finite-difference operator gives
 
-$$
-\begin{aligned}
-\mathrm{iteratedFiniteDiff}\;ys\;f\;D &-
-\mathrm{iteratedFiniteDiff}\;ys\;f\;(D+h)
-\\
-&=\mathrm{iteratedFiniteDiff}\;(h::ys)\;f\;D
-\end{aligned}
-$$
+```lean
+iteratedFiniteDiff ys f D - iteratedFiniteDiff ys f (D + h) = finiteDiffExpansion (h :: ys) f D
+```lean
 
 The induction hypothesis is then applied to both terms:
 
@@ -135,9 +130,9 @@ rw [ih D, ih (D + h)]
 
 This reduces the goal to
 
-$$
-\mathrm{finiteDiffExpansion}\;ys\;f\;D-\mathrm{finiteDiffExpansion}\;ys\;f\;(D+h)=\mathrm{finiteDiffExpansion}\;(h::ys)\;f\;D
-$$
+```lean
+finiteDiffExpansion ys f D - finiteDiffExpansion ys f (D + h) = finiteDiffExpansion (h :: ys) f D
+```
 
 It remains to compare the sublists of `h :: ys` with those of `ys`.
 
