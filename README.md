@@ -1,22 +1,104 @@
-# TwoSiteBooleanLattice
+# CosmoLattice (TwoSiteBooleanLattice)
 
 This project formalizes two equivalent descriptions of the finite-difference expansion used for studying Boolean-lattice formalization of two-site $\ell$-loop cosmological wavefunction.
 
-The relevant paper: "A Boolean-Lattice Perspective for All-Loop Two-Site Cosmological Wavefunction" [arXiv:2605.30797](https://arxiv.org/abs/2605.30797) (v2 is in preparation and will add more mathematical analysis)
+The relevant paper: "A Boolean-Lattice Perspective for All-Loop Two-Site Cosmological Wavefunction" [arXiv:2605.30797](https://arxiv.org/abs/2605.30797) (v2 is in preparation and will add more mathematical analysis).
+
+## Local AI proof completion with Ollama
+
+`AI_Proof_Demo` provides a small generate-and-check loop for Lean proofs. It sends the
+proof template and relevant project source to a model already installed in local Ollama,
+extracts the proposed tactics, and runs Lean on every candidate. A candidate containing
+`sorry`, `admit`, or `axiom` is rejected before Lean is invoked. If Lean reports an error,
+the diagnostics are sent back to the model for the next attempt.
+
+The default model is `gpt-oss:20b`. Start Ollama and run:
+
+```bash
+ollama serve
+python3 AI_Proof_Demo/ollama_prove.py
+```
+
+The default prompt uses
+`AI_Proof_Demo/FiniteDiffProofReference.txt`, a theorem-name-free reference proof body.
+The generated theorem imports only `CosmoLattice.FiniteDiffCore`, so it cannot call the
+already-proved theorem from `CosmoLattice.FiniteDiff`; Lean checks the generated induction
+proof independently.
+
+Choose another installed model or change the retry count with:
+
+```bash
+python3 AI_Proof_Demo/ollama_prove.py \
+  --model phi4-mini:latest \
+  --attempts 5
+```
+
+The model can also be selected through `OLLAMA_MODEL`. `OLLAMA_URL` changes the server
+address when Ollama is not listening on `http://127.0.0.1:11434`.
+
+For local CPU inference, generation and Lean checking have separate time limits. Reasoning
+effort and output length can also be bounded:
+
+```bash
+python3 AI_Proof_Demo/ollama_prove.py \
+  --model gpt-oss:20b \
+  --think low \
+  --num-predict 1400 \
+  --generation-timeout 600 \
+  --timeout 300
+```
+
+For `gpt-oss:20b`, the script defaults to prompt-only JSON output and then parses the
+returned text. This avoids an Ollama schema-mode behavior where the model can report
+`done=true` with an empty `response`. If you use a model that handles Ollama's structured
+output reliably, enable it explicitly:
+
+```bash
+python3 AI_Proof_Demo/ollama_prove.py --json-schema
+```
+
+Only a Lean-verified candidate is written to
+`AI_Proof_Demo/completion.txt` and `CosmoLattice/AIProofGenerated.lean`. Failed attempts
+leave those files unchanged. To skip generation and recheck the saved completion, run:
+
+```bash
+python3 AI_Proof_Demo/ollama_prove.py --verify-only
+# The original entry point remains available as an alias:
+python3 AI_Proof_Demo/assemble_and_verify.py
+```
+
+To use the loop for another theorem, put exactly one line containing
+`-- AI_PROOF_HOLE` inside an existing `by` proof in a template, then pass that template,
+its relevant Lean source files, and the desired output paths:
+
+```bash
+python3 AI_Proof_Demo/ollama_prove.py \
+  --template path/to/PartialProof.lean.template \
+  --context CosmoLattice/FiniteDiff.lean \
+  --context CosmoLattice/AnotherDependency.lean \
+  --completion path/to/completion.txt \
+  --output CosmoLattice/AIProofGenerated.lean
+```
+
+Run the Python checks with:
+
+```bash
+python3 -m unittest discover -s AI_Proof_Demo -p 'test_*.py' -v
+```
 
 ## 1. Finite-Difference Expansion
 
 This Lean file formalizes a standard alternating subset expansion for iterated finite differences.
 
-The main identity is that applying a finite sequence of difference operators to a function `f` is equivalent to summing over all sublists, interpreted as subsets, with alternating signs:
+The main identity is that applying a finite sequence of difference operators $\Delta$ to a function is equivalent to summing over all sublists, interpreted as subsets, with alternating signs:
 
 $$
 \prod_i \Delta_{y_i} f(D) = \sum_{S \subseteq \mathbf{Y}} (-1)^{|S|} f\left(D + \sum_{y \in S} y\right)
 $$
 
-which is useful in the analysis of cosmology wavefunctions under loop level.
+which is useful in the analysis of cosmological wavefunction coefficients under loop level.
 
-Here the one-step finite difference is defined by
+Here the finite difference is defined by
 
 $$
 \Delta_h f(D) = f(D) - f(D + h)
