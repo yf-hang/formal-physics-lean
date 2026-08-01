@@ -95,7 +95,7 @@ The proof proceeds by induction on the list `ys`.
 For the empty list, `ys = []`, no finite-difference operator is applied, so
 
 $$
-\mathrm{iteratedFiniteDiff}\;[\,]\;f\;D=f(D)
+\mathrm{iteratedFiniteDiff}\;[\;]\;f\;D=f(D)
 $$
 
 The only sublist of the empty list is the empty list itself. Therefore,
