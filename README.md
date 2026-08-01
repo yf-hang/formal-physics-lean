@@ -53,9 +53,7 @@ ys = [y₁, y₂, y₃]
 then
 
 $$
-\mathrm{iteratedFiniteDiff}\;ys\;f
-=
-\Delta_{y_1}\bigl(\Delta_{y_2}(\Delta_{y_3}f)\bigr)
+\mathrm{iteratedFiniteDiff}\; ys\; f =\Delta_{y_1}\bigl(\Delta_{y_2}(\Delta_{y_3}f)\bigr)
 $$
 
 #### 3). Alternating sublist expansion
@@ -71,9 +69,7 @@ def finiteDiffExpansion {A K : Type*}
 This represents
 
 $$
-\sum_{V\subseteq ys.\mathrm{sublists}}
-(-1)^{|V|}
-f\left(D+\sum_{a\in V}a\right)
+\sum_{V\subseteq ys.\mathrm{sublists}} (-1)^{|V|} f\left(D+\sum_{a\in V}a\right)
 $$
 
 ### Main Theorem
