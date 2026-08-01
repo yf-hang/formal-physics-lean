@@ -120,7 +120,7 @@ Expanding the first finite-difference operator gives
 
 ```lean
 iteratedFiniteDiff ys f D - iteratedFiniteDiff ys f (D + h) = finiteDiffExpansion (h :: ys) f D
-```lean
+```
 
 The induction hypothesis is then applied to both terms:
 
