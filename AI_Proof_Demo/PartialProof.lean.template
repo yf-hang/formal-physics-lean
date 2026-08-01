@@ -1,0 +1,28 @@
+/-
+Copyright (c) 2026 CosmoLattice contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: CosmoLattice contributors
+-/
+
+import CosmoLattice.FiniteDiffCore
+
+/-!
+# AI proof completion demo
+
+This file is generated from `AI_Proof_Demo/PartialProof.lean.template` by
+`AI_Proof_Demo/ollama_prove.py`. The script asks a local Ollama model for the proof
+hole below and writes this file only after Lean accepts the completed theorem.
+-/
+
+namespace AIProofDemo
+
+open CosmoLattice.FiniteDiff
+
+theorem iteratedFiniteDiff_eq_sum_subsets_ai_completion
+    {A K : Type*} [AddCommMonoid A] [CommRing K]
+    (ys : List A) (f : A → K) (D : A) :
+    CosmoLattice.FiniteDiff.iteratedFiniteDiff ys f D =
+      CosmoLattice.FiniteDiff.finiteDiffExpansion ys f D := by
+  -- AI_PROOF_HOLE
+
+end AIProofDemo
