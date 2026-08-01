@@ -9,7 +9,7 @@ The relevant paper: "A Boolean-Lattice Perspective for All-Loop Two-Site Cosmolo
 The file `FiniteDiff.lean` formalizes an alternating subset expansion for iterated finite differences. The main identity expresses an iterated finite difference as an alternating sum over all subsets of the shifts:
 
 $$
-\prod_{a\in\mathbf{Y}} \Delta_{a}\; f(D) = \sum_{V \subseteq \mathbf{Y}} (-1)^{|V|}\; f\bigg(D + \sum_{a \in V} a\bigg)
+\prod_{a\in\mathbf{Y}} \Delta_{a} f(D) = \sum_{V \subseteq \mathbf{Y}} (-1)^{|V|} f\bigg(D + \sum_{a \in V} a\bigg)
 $$
 
 where $\mathbf{Y}=\{Y_1,\ldots,Y_{\ell+1}\}$ is the set of internal energies carried on propagators and $\Delta$ represents the finite difference operator defined by
@@ -53,7 +53,7 @@ ys = [y₁, y₂, y₃]
 then
 
 $$
-\mathrm{iteratedFiniteDiff}\, ys\, f =\Delta_{y_1}\bigl(\Delta_{y_2}(\Delta_{y_3}f)\bigr)
+\mathrm{iteratedFiniteDiff}\ ys\ f =\Delta_{y_1}\bigl(\Delta_{y_2}(\Delta_{y_3}f)\bigr)
 $$
 
 #### 3). Alternating sublist expansion
@@ -91,13 +91,13 @@ The proof proceeds by induction on the list `ys`.
 For the empty list, `ys = []`, no finite-difference operator is applied, so
 
 $$
-\mathrm{iteratedFiniteDiff}\, [ \, ] \,f \, D = f(D)
+\mathrm{iteratedFiniteDiff}\ [ \ ] \ f \ D = f(D)
 $$
 
 The only sublist of the empty list is the empty list itself. Therefore,
 
 $$
-\mathrm{finiteDiffExpansion}\;[\;]\;f\;D=(-1)^0f(D+0)=f(D)
+\mathrm{finiteDiffExpansion}\ [ \ ]\ f\ D = (-1)^0f(D+0)=f(D)
 $$
 
 Lean proves this case by simplifying the definitions:
@@ -170,8 +170,7 @@ Therefore, the expansion over all sublists of `h :: ys` becomes
 
 $$
 \sum_{V\subseteq ys.\mathrm{sublists}}
-(-1)^{|V|}
-f\left(D+\sum_{a\in V}a\right)\; - \;\sum_{V\subseteq ys.\mathrm{sublists}}
+(-1)^{|V|} f\left(D+\sum_{a\in V}a\right) - \sum_{V\subseteq ys.\mathrm{sublists}}
 (-1)^{|V|} f\left(D+h+\sum_{a\in V}a\right)
 $$
 
