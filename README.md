@@ -215,69 +215,14 @@ $$
 \prod_i \Delta_{a_i} \left(\frac{1}{D}\right) = \sum_{V \subseteq \mathbf{Y}} \frac{(-1)^{|V|}}{D_V}
 $$
 
-## Local AI proof completion with Ollama
+## Local LLM-assisted proof completion
 
 `AI_Proof_Demo` provides a small generate-and-check loop for Lean proofs. It sends the
-proof template and relevant project source to a model already installed in local Ollama,
+proof template and relevant project source to a model already installed in local LLM,
 extracts the proposed tactics, and runs Lean on every candidate. A candidate containing
 `sorry`, `admit`, or `axiom` is rejected before Lean is invoked. If Lean reports an error,
 the diagnostics are sent back to the model for the next attempt.
 
-The default model is `gpt-oss:20b`. Start Ollama and run:
-
-```bash
-ollama serve
-python3 AI_Proof_Demo/ollama_prove.py
-```
-
-Choose another installed model or change the retry count with:
-
-```bash
-python3 AI_Proof_Demo/ollama_prove.py \
-  --model phi4-mini:latest \
-  --attempts 5
-```
-
-The model can also be selected through `OLLAMA_MODEL`. `OLLAMA_URL` changes the server
-address when Ollama is not listening on `http://127.0.0.1:11434`.
-
-For `gpt-oss:20b`, the script defaults to prompt-only JSON output and then parses the
-returned text. This avoids an Ollama schema-mode behavior where the model can report
-`done=true` with an empty `response`. If you use a model that handles Ollama's structured
-output reliably, enable it explicitly:
-
-```bash
-python3 AI_Proof_Demo/ollama_prove.py --json-schema
-```
-
-Only a Lean-verified candidate is written to
-`AI_Proof_Demo/completion.txt` and `CosmoLattice/AIProofGenerated.lean`. Failed attempts
-leave those files unchanged. To skip generation and recheck the saved completion, run:
-
-```bash
-python3 AI_Proof_Demo/ollama_prove.py --verify-only
-# The original entry point remains available as an alias:
-python3 AI_Proof_Demo/assemble_and_verify.py
-```
-
-To use the loop for another theorem, put exactly one line containing
-`-- AI_PROOF_HOLE` inside an existing `by` proof in a template, then pass that template,
-its relevant Lean source files, and the desired output paths:
-
-```bash
-python3 AI_Proof_Demo/ollama_prove.py \
-  --template path/to/PartialProof.lean.template \
-  --context CosmoLattice/FiniteDiff.lean \
-  --context CosmoLattice/AnotherDependency.lean \
-  --completion path/to/completion.txt \
-  --output CosmoLattice/AIProofGenerated.lean
-```
-
-Run the Python checks with:
-
-```bash
-python3 -m unittest discover -s AI_Proof_Demo -p 'test_*.py' -v
-```
 
 ## B. Maximal-Chain Expansion
 
