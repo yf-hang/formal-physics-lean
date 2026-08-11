@@ -24,7 +24,7 @@ from typing import Any, Sequence
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_TEMPLATE = ROOT / "AI_Proof_Demo" / "PartialProof.lean.template"
 DEFAULT_COMPLETION = ROOT / "AI_Proof_Demo" / "completion.txt"
-DEFAULT_OUTPUT = ROOT / "CosmoLattice" / "AIProofGenerated.lean"
+DEFAULT_OUTPUT = ROOT / "AI_Proof_Demo" / "AIProofGenerated.lean"
 DEFAULT_CONTEXT = ROOT / "AI_Proof_Demo" / "FiniteDiffProofReference.txt"
 DEFAULT_DEEPSEEK_TASK = ROOT / "AI_Proof_Demo" / "DeepSeekLocalGoal.lean.template"
 DEFAULT_CONFIG = ROOT / "AI_Proof_Demo" / "config.json"

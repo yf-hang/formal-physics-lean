@@ -11,7 +11,7 @@
     "AI_Proof_Demo/FiniteDiffProofReference.txt"
   ],
   "completion": "AI_Proof_Demo/completion.txt",
-  "output": "CosmoLattice/AIProofGenerated.lean",
+  "output": "AI_Proof_Demo/AIProofGenerated.lean",
   "instruction": [],
   "forbid_identifier": [],
   "attempts": 3,

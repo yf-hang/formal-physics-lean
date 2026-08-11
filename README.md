@@ -42,7 +42,7 @@ Run the proof-completion loop with:
 
 The script reads its default settings from `AI_Proof_Demo/config.json`. After Lean accepts
 a candidate, it saves the tactic to `AI_Proof_Demo/completion.txt` and the assembled theorem
-to `CosmoLattice/AIProofGenerated.lean`. Use `--config path/to/config.json` to select another
+to `AI_Proof_Demo/AIProofGenerated.lean`. Use `--config path/to/config.json` to select another
 configuration, or pass an option such as `--attempts 1` to override an individual setting.
 
 To check a saved completion without loading the model, set `"verify_only": true` and run
