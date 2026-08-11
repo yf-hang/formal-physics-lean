@@ -1,4 +1,5 @@
-import CosmoLattice.Basic
 import CosmoLattice.FiniteDiff
+import CosmoLattice.FiniteDiffApplications
 import CosmoLattice.MaxChain
+import CosmoLattice.MaxChainApplications
 import CosmoLattice.AIProofGenerated

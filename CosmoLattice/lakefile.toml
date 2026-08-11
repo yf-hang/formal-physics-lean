@@ -1,7 +1,7 @@
-name = "TwoSiteBoolean"
+name = "CosmoLattice"
 version = "0.1.0"
 keywords = ["math"]
-defaultTargets = ["TwoSiteBoolean"]
+defaultTargets = ["CosmoLattice"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -12,7 +12,7 @@ maxSynthPendingDepth = 3
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.30.0-rc2"
+rev = "v4.33.0"
 
 [[lean_lib]]
-name = "TwoSiteBoolean"
+name = "CosmoLattice"

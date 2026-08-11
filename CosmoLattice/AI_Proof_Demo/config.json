@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "backend": "transformers",
+  "device": "auto",
+  "gpu_memory_gib": 8,
+  "model": "deepseek-ai/DeepSeek-Prover-V2-7B",
+  "prompt_mode": "auto",
+  "template": "AI_Proof_Demo/PartialProof.lean.template",
+  "deepseek_task": "AI_Proof_Demo/DeepSeekLocalGoal.lean.template",
+  "context": [
+    "AI_Proof_Demo/FiniteDiffProofReference.txt"
+  ],
+  "completion": "AI_Proof_Demo/completion.txt",
+  "output": "CosmoLattice/AIProofGenerated.lean",
+  "instruction": [],
+  "forbid_identifier": [],
+  "attempts": 3,
+  "temperature": 0.0,
+  "num_predict": 512,
+  "prefill_num_predict": 96,
+  "transformers_cache": ".cache/huggingface",
+  "offline": true,
+  "timeout": 300,
+  "verify_only": false,
+  "log_dir": "AI_Proof_Demo/runs",
+  "no_log": false
+}

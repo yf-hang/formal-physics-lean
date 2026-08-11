@@ -1,0 +1,28 @@
+The target imports the following definitions and helper lemmas from
+`CosmoLattice.FiniteDiff`. Their statements are supplied as reference; the proof of
+the target theorem is deliberately not included in this prompt context.
+
+```lean
+namespace CosmoLattice.FiniteDiff
+
+lemma list_sum_flatMap_pair {alpha M : Type*} [AddCommMonoid M]
+    (l : List alpha) (F G : alpha → M) :
+    (l.flatMap (fun x => [F x, G x])).sum = (l.map F).sum + (l.map G).sum
+
+lemma list_sum_map_neg {alpha M : Type*} [AddCommGroup M]
+    (l : List alpha) (F : alpha → M) :
+    (l.map (fun x => -F x)).sum = - (l.map F).sum
+
+def finiteDiff {A K : Type*} [Add A] [Sub K] (h : A) (f : A → K) : A → K :=
+  fun D => f D - f (D + h)
+
+def iteratedFiniteDiff {A K : Type*} [Add A] [Sub K]
+    (ys : List A) (f : A → K) : A → K :=
+  ys.foldr (fun h g => finiteDiff h g) f
+
+def finiteDiffExpansion {A K : Type*} [AddCommMonoid A] [CommRing K]
+    (ys : List A) (f : A → K) (D : A) : K :=
+  (ys.sublists.map fun V => (-1 : K) ^ V.length * f (D + V.sum)).sum
+
+end CosmoLattice.FiniteDiff
+```

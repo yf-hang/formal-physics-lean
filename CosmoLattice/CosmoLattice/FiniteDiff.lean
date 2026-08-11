@@ -1,19 +1,19 @@
 /-
-Copyright (c) 2026 CosmoLattice contributors. All rights reserved.
+Copyright (c) 2026 Y. Hang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: CosmoLattice contributors
+Authors: Y. Hang
 -/
 
-import CosmoLattice.FiniteDiffCore
+import Mathlib
 
 /-!
 # Finite-difference expansion
 
-This file formalizes the finite-difference expansion
+This file formalizes the general finite-difference expansion
 
-  ∏ᵢ Δ_{yᵢ} (1 / D) = ∑_{V ⊆ \mathbf{Y}} (-1)^{|V|} / D_V,
+  ∏ᵢ Δ_{yᵢ} f(D) = ∑_{V ⊆ \mathbf{Y}} (-1)^{|V|} f(D + ∑_{y ∈ V} y),
 
-where Δ_y f(D) = f(D) - f(D + y) and D_V = D + ∑_{y ∈ V} y.
+where Δ_y f(D) = f(D) - f(D + y).
 
 The finite set \mathbf{Y} is represented by an ordered list `ys`.
 Its sublists enumerate the subsets of \mathbf{Y},
@@ -22,7 +22,40 @@ with the inherited order used only to compute the sum of shifts.
 
 namespace CosmoLattice.FiniteDiff
 
-open scoped BigOperators
+lemma list_sum_flatMap_pair {α M : Type*} [AddCommMonoid M]
+    (l : List α) (F G : α → M) :
+    (l.flatMap (fun x => [F x, G x])).sum = (l.map F).sum + (l.map G).sum := by
+  induction l with
+  | nil =>
+      simp
+  | cons _ _ ih =>
+      simp [ih, add_assoc, add_left_comm]
+
+lemma list_sum_map_neg {α M : Type*} [AddCommGroup M]
+    (l : List α) (F : α → M) :
+    (l.map (fun x => -F x)).sum = - (l.map F).sum := by
+  induction l with
+  | nil =>
+      simp
+  | cons _ _ ih =>
+      simp [ih, add_comm]
+
+/-- The one-step finite difference `Δ_h f(D) = f(D) - f(D + h)`. -/
+def finiteDiff {A K : Type*} [Add A] [Sub K] (h : A) (f : A → K) : A → K :=
+  fun D => f D - f (D + h)
+
+/-- Ordered product of finite-difference operators over the list of shifts. -/
+def iteratedFiniteDiff {A K : Type*} [Add A] [Sub K]
+    (ys : List A) (f : A → K) : A → K :=
+  ys.foldr (fun h g => finiteDiff h g) f
+
+/--
+The alternating subset expansion for an arbitrary function `f`.
+Here sublists of `ys` represent the subsets `V ⊆ \mathbf{Y}`.
+-/
+def finiteDiffExpansion {A K : Type*} [AddCommMonoid A] [CommRing K]
+    (ys : List A) (f : A → K) (D : A) : K :=
+  (ys.sublists.map fun V => (-1 : K) ^ V.length * f (D + V.sum)).sum
 
 /--
 General finite-difference identity:
@@ -62,25 +95,5 @@ theorem iteratedFiniteDiff_eq_sum_subsets
         congr with V
         simp [add_assoc]]
       ring
-
-/-
-The shifted denominator `D_V = D + ∑_{y∈V} y`.
--/
-def shiftedD {K : Type*} [Add K] [Zero K] (D : K) (V : List K) : K :=
-  D + V.sum
-
-/--
-Application of the finite-difference expansion to the function `f(D) = 1 / D`, yielding
-
-`∏ᵢ Δ_{yᵢ} (1 / D) = ∑_{V ⊆ \mathbf{Y}} (-1)^{|V|} / D_V`.
-
-In this Lean statement, `ys.sublists` enumerates the subsets `V ⊆ Y`.
--/
-theorem finiteDiff_inv_eq_sum_subsets
-    {K : Type*} [Field K] (ys : List K) (D : K) :
-    iteratedFiniteDiff ys (fun x : K => 1 / x) D =
-      (ys.sublists.map fun V => (-1 : K) ^ V.length / shiftedD D V).sum := by
-  rw [iteratedFiniteDiff_eq_sum_subsets]
-  simp [finiteDiffExpansion, shiftedD, div_eq_mul_inv]
 
 end CosmoLattice.FiniteDiff

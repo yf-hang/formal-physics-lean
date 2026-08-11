@@ -1,0 +1,20 @@
+import Mathlib
+
+/-!
+This small theorem is the elaborated local goal in
+`PartialProof.lean.template`. DeepSeek-Prover sees this theorem with the hole rendered as
+`sorry`; the generated tactic is still inserted into and verified against the original
+partial-proof template.
+-/
+
+namespace AIProofLocalTask
+
+example {A K : Type*} [AddCommMonoid A] [CommRing K]
+    (f : A → K) (D h : A) (V : List A) :
+    (-1 : K) ^ V.length * -1 * f (D + (h + V.sum)) =
+      -((-1 : K) ^ V.length * f (D + h + V.sum)) := by
+  -- AI_COMPLETION_BEGIN
+  -- AI_PROOF_HOLE
+  -- AI_COMPLETION_END
+
+end AIProofLocalTask

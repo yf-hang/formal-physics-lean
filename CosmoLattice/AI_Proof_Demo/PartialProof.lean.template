@@ -1,16 +1,16 @@
 /-
-Copyright (c) 2026 CosmoLattice contributors. All rights reserved.
+Copyright (c) 2026 Y. Hang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: CosmoLattice contributors
+Authors: Y. Hang
 -/
 
-import CosmoLattice.FiniteDiffCore
+import CosmoLattice.FiniteDiff
 
 /-!
 # AI proof completion demo
 
 This file is generated from `AI_Proof_Demo/PartialProof.lean.template` by
-`AI_Proof_Demo/ollama_prove.py`. The script asks a local Ollama model for the proof
+`AI_Proof_Demo/ai_prove.py`. The script asks a local model for the proof
 hole below and writes this file only after Lean accepts the completed theorem.
 -/
 
@@ -51,7 +51,8 @@ theorem iteratedFiniteDiff_eq_sum_subsets_ai_completion
               ys.sublists).sum by
         rw [← list_sum_map_neg]
         congr with V
-        simp [add_assoc]]
+        -- AI_PROOF_HOLE
+      ]
       ring
 
 end AIProofDemo
