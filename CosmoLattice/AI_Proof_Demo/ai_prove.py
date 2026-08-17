@@ -47,7 +47,7 @@ TOP_LEVEL_COMMAND_PATTERN = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 SIMPLE_SIMP_PATTERN = re.compile(
-    r"^(?P<command>simp(?:_all)?(?:\s+only)?)\s*\["
+    r"^(?P<prefix>·\s*)?(?P<command>simp(?:_all)?(?:\s+only)?)\s*\["
     r"(?P<arguments>[A-Za-z_][A-Za-z0-9_'.]*(?:\s*,\s*"
     r"[A-Za-z_][A-Za-z0-9_'.]*)*)\]\s*$"
 )
@@ -58,6 +58,7 @@ CONFIG_PATH_KEYS = {
     "template",
     "deepseek_task",
     "completion",
+    "comparison",
     "output",
     "transformers_cache",
     "log_dir",
@@ -174,6 +175,11 @@ class RunLogger:
                 "deepseek_task": relative_to_root(args.deepseek_task),
                 "transformers_cache": relative_to_root(args.transformers_cache),
                 "completion": relative_to_root(args.completion),
+                "comparison": (
+                    relative_to_root(args.comparison)
+                    if args.comparison is not None
+                    else None
+                ),
                 "output": relative_to_root(args.output),
                 "contexts": [relative_to_root(path) for path in (args.context or [])],
                 "attempts": args.attempts,
@@ -417,7 +423,7 @@ def minimize_simple_simp_completion(
 
     retained = [argument for argument in arguments if argument not in unused]
     suffix = f" [{', '.join(retained)}]" if retained else ""
-    return match.group("command") + suffix, removed
+    return (match.group("prefix") or "") + match.group("command") + suffix, removed
 
 
 def remove_simple_simp_argument(completion: str, argument: str) -> str | None:
@@ -432,7 +438,12 @@ def remove_simple_simp_argument(completion: str, argument: str) -> str | None:
         return None
     retained = [item for item in arguments if item != argument]
     suffix = f" [{', '.join(retained)}]" if retained else ""
-    return match.group("command") + suffix
+    return (match.group("prefix") or "") + match.group("command") + suffix
+
+
+def remove_leading_goal_bullet(completion: str) -> str:
+    """Remove a model-generated leading goal bullet for a cleaner replacement."""
+    return re.sub(r"^·[ \t]*", "", completion, count=1)
 
 
 def relative_to_root(path: Path) -> str:
@@ -1075,6 +1086,25 @@ def write_verified_result(
     output_path.write_text(source, encoding="utf-8")
 
 
+def write_comparison_report(
+    path: Path, raw: str, extracted: str, minimized: str
+) -> None:
+    """Write the three auditable model-output stages for a successful run."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    report = (
+        "Raw model output\n"
+        "----------------\n"
+        f"{raw.rstrip()}\n\n"
+        "Extracted passing candidate\n"
+        "---------------------------\n"
+        f"{extracted.rstrip()}\n\n"
+        "Minimized verified completion\n"
+        "-----------------------------\n"
+        f"{minimized.rstrip()}\n"
+    )
+    path.write_text(report, encoding="utf-8")
+
+
 def resolve_config_path(value: str | Path) -> Path:
     """Resolve a configuration path relative to the repository root."""
     path = Path(value).expanduser()
@@ -1215,6 +1245,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Standalone local-goal template used by the DeepSeek-Prover prompt mode.",
     )
     parser.add_argument("--completion", type=Path, default=DEFAULT_COMPLETION)
+    parser.add_argument(
+        "--comparison",
+        type=Path,
+        default=None,
+        help="Optional text report comparing raw, extracted, and minimized output.",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--context",
@@ -1565,6 +1601,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             attempt_record["raw_response"] = raw
             try:
                 completion = normalize_model_output(raw)
+                extracted_candidate = completion
                 for identifier in args.forbid_identifier:
                     if identifier in completion:
                         raise ProofError(
@@ -1598,6 +1635,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 generated, output_path.parent, args.timeout, output_path
             )
             if passed:
+                attempt_record["extracted_passing_candidate"] = extracted_candidate
                 minimization_steps: list[dict[str, Any]] = []
                 while True:
                     minimized_completion, removed_arguments = (
@@ -1678,14 +1716,47 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "steps": minimization_steps,
                         "final_completion": completion,
                     }
+                bulletless_completion = remove_leading_goal_bullet(completion)
+                if bulletless_completion != completion:
+                    bulletless_generated = assemble(template, bulletless_completion)
+                    bulletless_passed, bulletless_diagnostics = verify_lean(
+                        bulletless_generated,
+                        output_path.parent,
+                        args.timeout,
+                        output_path,
+                    )
+                    attempt_record["goal_bullet_removal"] = {
+                        "from": completion,
+                        "to": bulletless_completion,
+                        "passed": bulletless_passed,
+                        "diagnostics": bulletless_diagnostics,
+                    }
+                    if bulletless_passed:
+                        completion = bulletless_completion
+                        generated = bulletless_generated
+                        diagnostics = bulletless_diagnostics
+                        attempt_record["completion"] = completion
+                attempt_record["minimized_verified_completion"] = completion
             attempt_record["verification_seconds"] = elapsed_seconds(verification_started)
             attempt_record["diagnostics"] = diagnostics
             if passed:
                 attempt_record["status"] = "success"
                 write_verified_result(completion, generated, completion_path, output_path)
+                if args.comparison is not None:
+                    write_comparison_report(
+                        args.comparison.resolve(), raw, extracted_candidate, completion
+                    )
                 logger.finish_attempt(attempt_record, attempt_started)
                 print("Lean verification passed.")
+                print("Raw model output:")
+                print(raw)
+                print("Extracted passing candidate:")
+                print(extracted_candidate)
+                print("Minimized verified completion:")
+                print(completion)
                 print(f"Completion: {relative_to_root(completion_path)}")
+                if args.comparison is not None:
+                    print(f"Comparison: {relative_to_root(args.comparison)}")
                 print(f"Generated file: {relative_to_root(output_path)}")
                 logger.finish("success", 0)
                 return 0
