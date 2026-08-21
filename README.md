@@ -61,6 +61,10 @@ The script reads its default settings from `AI_Proof_Demo/config.json`. After Le
 a candidate, it saves the tactic to `AI_Proof_Demo/completion.txt` and the assembled theorem
 to `AI_Proof_Demo/AIProofGenerated.lean`. Use `--config path/to/config.json` to select another
 configuration, or pass an option such as `--attempts 1` to override an individual setting.
+Set `"minimize_mode"` to `"none"` to keep the first verified candidate, `"lint"`
+to batch-remove only the `simp` arguments that Lean reports as unused, or `"full"`
+to additionally try removing the remaining arguments one at a time. The default is
+`"lint"`; `"full"` can produce a shorter proof but requires more Lean verification runs.
 The DeepSeek prompt is derived from `PartialProof.lean.template` itself: Lean first reports
 the live goal at `AI_PROOF_HOLE`, and the script constructs a short local completion prefix
 at runtime. No separate `DeepSeekLocalGoal.lean.template` is required.

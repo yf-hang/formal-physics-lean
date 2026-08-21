@@ -66,6 +66,7 @@ CONFIG_STRING_LIST_KEYS = {"forbid_identifier", "instruction"}
 CONFIG_STRING_KEYS = {
     "backend",
     "device",
+    "minimize_mode",
     "model",
     "ollama_url",
     "prompt_mode",
@@ -87,7 +88,6 @@ CONFIG_BOOLEAN_KEYS = {
     "no_log",
     "offline",
     "load_in_8bit",
-    "minimize",
 }
 CONFIG_ALLOWED_KEYS = (
     CONFIG_PATH_KEYS
@@ -174,7 +174,7 @@ class RunLogger:
                 "device": args.device,
                 "gpu_memory_gib": args.gpu_memory_gib,
                 "load_in_8bit": args.load_in_8bit,
-                "minimize": args.minimize,
+                "minimize_mode": args.minimize_mode,
                 "model": args.model,
                 "prompt_mode": args.prompt_mode,
                 "ollama_url": args.ollama_url,
@@ -1355,13 +1355,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--no-minimize",
-        dest="minimize",
-        action="store_false",
-        default=True,
+        "--minimize-mode",
+        choices=("none", "lint", "full"),
+        default="lint",
         help=(
-            "Save the first Lean-verified candidate without running additional "
-            "simp-argument and goal-bullet minimization checks."
+            "Proof minimization: none keeps the first verified candidate; lint removes "
+            "simp arguments Lean reports as unused; full additionally tries remaining "
+            "arguments one at a time (default: lint)."
         ),
     )
     parser.add_argument(
@@ -1494,6 +1494,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         parser.error(
             "--prompt-mode must be `auto`, `tactics`, or `deepseek-prover`"
         )
+    if args.minimize_mode not in {"none", "lint", "full"}:
+        parser.error("--minimize-mode must be `none`, `lint`, or `full`")
     if args.think not in {"false", "true", "low", "medium", "high"}:
         parser.error("--think must be false, true, low, medium, or high")
     if not args.model:
@@ -1777,7 +1779,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if passed:
                 attempt_record["extracted_passing_candidate"] = extracted_candidate
                 minimization_steps: list[dict[str, Any]] = []
-                while args.minimize:
+                while args.minimize_mode != "none":
                     minimized_completion, removed_arguments = (
                         minimize_simple_simp_completion(completion, diagnostics)
                     )
@@ -1809,7 +1811,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 # combination. Greedily test the remaining arguments as well, since a
                 # proof can still work after removing an argument that the linter used.
                 required_simp_arguments: set[str] = set()
-                while args.minimize:
+                while args.minimize_mode == "full":
                     simple_match = SIMPLE_SIMP_PATTERN.fullmatch(completion.strip())
                     if simple_match is None:
                         break
@@ -1861,7 +1863,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "final_completion": completion,
                     }
                 bulletless_completion = remove_leading_goal_bullet(completion)
-                if args.minimize and bulletless_completion != completion:
+                if args.minimize_mode == "full" and bulletless_completion != completion:
                     bulletless_generated = assemble(template, bulletless_completion)
                     bulletless_passed, bulletless_diagnostics = verify_lean(
                         bulletless_generated,
@@ -1898,7 +1900,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(extracted_candidate)
                 print(
                     "Minimized verified completion:"
-                    if args.minimize
+                    if args.minimize_mode != "none"
                     else "Verified completion (minimization disabled):"
                 )
                 print(completion)

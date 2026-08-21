@@ -21,7 +21,7 @@
   "transformers_cache": ".cache/huggingface",
   "offline": true,
   "timeout": 300,
-  "minimize": true,
+  "minimize_mode": "lint",
   "verify_only": false,
   "log_dir": "AI_Proof_Demo/runs",
   "no_log": false
