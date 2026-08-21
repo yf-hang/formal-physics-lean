@@ -1,4 +1,6 @@
 .DS_Store
 .lake/
+.cache/
 __pycache__/
 *.pyc
+CosmoLattice/AI_Proof_Demo/runs/

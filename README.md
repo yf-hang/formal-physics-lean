@@ -28,6 +28,12 @@ python3 -m venv --system-site-packages .venv-deepseek
   'sentencepiece==0.2.0' 'safetensors>=0.4.3'
 ```
 
+The optional CUDA 8-bit profile also needs `bitsandbytes`:
+
+```bash
+.venv-deepseek/bin/python -m pip install 'bitsandbytes==0.50.1'
+```
+
 Before the first run, review `AI_Proof_Demo/config.json`. Set `"offline": false` to download
 the configured model, then switch it back to `true` once the model is cached for fully
 local execution.
@@ -40,10 +46,24 @@ Run the proof-completion loop with:
 .venv-deepseek/bin/python AI_Proof_Demo/ai_prove.py
 ```
 
+The default `AI_Proof_Demo/config.json` runs the Transformers model on CPU. To use
+the tested CUDA 8-bit profile instead, select the separate GPU configuration:
+
+```bash
+.venv-deepseek/bin/python AI_Proof_Demo/ai_prove.py \
+  --config AI_Proof_Demo/config.cuda.json
+```
+
+The CUDA profile uses bitsandbytes to quantize the existing cached model weights in
+memory while loading them. It does not download or store a separate 8-bit model.
+
 The script reads its default settings from `AI_Proof_Demo/config.json`. After Lean accepts
 a candidate, it saves the tactic to `AI_Proof_Demo/completion.txt` and the assembled theorem
 to `AI_Proof_Demo/AIProofGenerated.lean`. Use `--config path/to/config.json` to select another
 configuration, or pass an option such as `--attempts 1` to override an individual setting.
+The DeepSeek prompt is derived from `PartialProof.lean.template` itself: Lean first reports
+the live goal at `AI_PROOF_HOLE`, and the script constructs a short local completion prefix
+at runtime. No separate `DeepSeekLocalGoal.lean.template` is required.
 
 To check a saved completion without loading the model, set `"verify_only": true` and run
 the same command. Alternatively, use the standalone verification entry point:

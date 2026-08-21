@@ -26,7 +26,6 @@ DEFAULT_TEMPLATE = ROOT / "AI_Proof_Demo" / "PartialProof.lean.template"
 DEFAULT_COMPLETION = ROOT / "AI_Proof_Demo" / "completion.txt"
 DEFAULT_OUTPUT = ROOT / "AI_Proof_Demo" / "AIProofGenerated.lean"
 DEFAULT_CONTEXT = ROOT / "AI_Proof_Demo" / "FiniteDiffProofReference.txt"
-DEFAULT_DEEPSEEK_TASK = ROOT / "AI_Proof_Demo" / "DeepSeekLocalGoal.lean.template"
 DEFAULT_CONFIG = ROOT / "AI_Proof_Demo" / "config.json"
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "hf.co/unsloth/DeepSeek-Prover-V2-7B-GGUF:BF16"
@@ -56,7 +55,6 @@ UNUSED_SIMP_ARGUMENT_PATTERN = re.compile(
 )
 CONFIG_PATH_KEYS = {
     "template",
-    "deepseek_task",
     "completion",
     "comparison",
     "output",
@@ -83,7 +81,14 @@ CONFIG_INTEGER_KEYS = {
     "timeout",
 }
 CONFIG_NUMBER_KEYS = {"temperature", "gpu_memory_gib"}
-CONFIG_BOOLEAN_KEYS = {"json_schema", "verify_only", "no_log", "offline"}
+CONFIG_BOOLEAN_KEYS = {
+    "json_schema",
+    "verify_only",
+    "no_log",
+    "offline",
+    "load_in_8bit",
+    "minimize",
+}
 CONFIG_ALLOWED_KEYS = (
     CONFIG_PATH_KEYS
     | CONFIG_PATH_LIST_KEYS
@@ -168,11 +173,12 @@ class RunLogger:
                 "backend": args.backend,
                 "device": args.device,
                 "gpu_memory_gib": args.gpu_memory_gib,
+                "load_in_8bit": args.load_in_8bit,
+                "minimize": args.minimize,
                 "model": args.model,
                 "prompt_mode": args.prompt_mode,
                 "ollama_url": args.ollama_url,
                 "template": relative_to_root(args.template),
-                "deepseek_task": relative_to_root(args.deepseek_task),
                 "transformers_cache": relative_to_root(args.transformers_cache),
                 "completion": relative_to_root(args.completion),
                 "comparison": (
@@ -477,6 +483,8 @@ def verify_lean(
                 cwd=ROOT,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 check=False,
                 timeout=timeout,
             )
@@ -495,6 +503,54 @@ def verify_lean(
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
+
+
+def inspect_lean_goal(
+    template: str, workdir: Path, timeout: int, display_path: Path
+) -> str:
+    """Ask Lean for the exact goal at the proof marker without another template."""
+    probe = replace_hole_marker(template, "trace_state\nsorry")
+    passed, diagnostics = verify_lean(
+        probe, workdir, timeout, display_path
+    )
+    if not passed:
+        raise ProofError(
+            "Lean could not elaborate the target template while inspecting the proof "
+            f"hole:\n{diagnostics}"
+        )
+    warning_pattern = re.compile(
+        r"^.*:\d+:\d+: warning: declaration uses `sorry`\s*$"
+    )
+    goal = "\n".join(
+        line for line in diagnostics.splitlines() if not warning_pattern.match(line)
+    ).strip()
+    if "⊢" not in goal:
+        raise ProofError(
+            "Lean elaborated the target template but did not report a goal at "
+            "AI_PROOF_HOLE."
+        )
+    return goal
+
+
+def build_goal_assistant_prefix(lean_goal: str, indent: str) -> str:
+    """Turn Lean's live tactic state into a short code-completion prefix."""
+    lines = lean_goal.splitlines()
+    goal_index = next(
+        (index for index, line in enumerate(lines) if line.startswith("⊢ ")),
+        None,
+    )
+    if goal_index is None:
+        raise ProofError("Lean goal state does not contain a `⊢` target.")
+    context = "\n".join(f"-- {line}" for line in lines[:goal_index])
+    target_lines = [lines[goal_index][2:], *lines[goal_index + 1 :]]
+    target = "\n".join(target_lines)
+    return (
+        "```lean4\n"
+        "-- Local context reported by Lean at AI_PROOF_HOLE:\n"
+        f"{context}\n"
+        f"example : {target} := by\n"
+        f"{indent}"
+    )
 
 
 def build_prompt(
@@ -549,12 +605,26 @@ Available project context:
 
 
 def build_deepseek_prompt(
-    task_template: str,
+    template: str,
     contexts: Sequence[tuple[str, str]],
     forbidden_identifiers: Sequence[str] = (),
     instructions: Sequence[str] = (),
+    lean_goal: str = "",
 ) -> str:
-    task = replace_hole_marker(task_template, "sorry")
+    matches = list(HOLE_PATTERN.finditer(template))
+    if len(matches) != 1:
+        raise ProofError(
+            f"Target template must contain exactly one AI_PROOF_HOLE marker; "
+            f"found {len(matches)}."
+        )
+    match = matches[0]
+    indent = match.group("indent")
+    marked_hole = (
+        f"{indent}{COMPLETION_BEGIN}\n"
+        f"{indent}sorry\n"
+        f"{indent}{COMPLETION_END}"
+    )
+    task = template[: match.start()] + marked_hole + template[match.end() :]
     context_text = "\n\n".join(
         f"--- {name} ---\n```lean4\n{source}\n```" for name, source in contexts
     )
@@ -576,6 +646,11 @@ They are reference declarations only; do not reproduce them in the answer.
 Relevant project declarations:
 {context_text}
 {forbidden_text}{instruction_text}
+Exact goal state reported by Lean at the proof hole:
+```text
+{lean_goal}
+```
+
 Complete the following Lean 4 code by replacing only `sorry` between
 `{COMPLETION_BEGIN}` and `{COMPLETION_END}`:
 
@@ -591,10 +666,11 @@ code. The code will be checked by Lean, so do not claim success without type-cor
 
 
 def build_transformers_prefill_prompt(
-    task_template: str,
+    template: str,
     contexts: Sequence[tuple[str, str]],
     forbidden_identifiers: Sequence[str] = (),
     instructions: Sequence[str] = (),
+    lean_goal: str = "",
 ) -> tuple[str, str]:
     context_text = "\n\n".join(
         f"--- {name} ---\n```lean4\n{source}\n```" for name, source in contexts
@@ -610,27 +686,35 @@ def build_transformers_prefill_prompt(
     if instructions:
         instruction_text = "\nAdditional requirements:\n- " + "\n- ".join(instructions) + "\n"
 
-    matches = list(HOLE_PATTERN.finditer(task_template))
+    matches = list(HOLE_PATTERN.finditer(template))
     if len(matches) != 1:
         raise ProofError(
-            f"DeepSeek task must contain exactly one AI_PROOF_HOLE marker; found {len(matches)}."
+            f"Target template must contain exactly one AI_PROOF_HOLE marker; "
+            f"found {len(matches)}."
         )
     match = matches[0]
-    assistant_prefix = "```lean4\n" + task_template[: match.start()] + match.group("indent")
-    task = replace_hole_marker(task_template, "sorry")
+    assistant_prefix = build_goal_assistant_prefix(
+        lean_goal, match.group("indent")
+    )
+    task = replace_hole_marker(template, "sorry")
     prompt = f"""Complete the single `sorry` in this Lean 4 theorem.
 Relevant declarations are provided first and are not part of the answer.
 
 Relevant project declarations:
 {context_text}
 {forbidden_text}{instruction_text}
+Exact goal state reported by Lean at the proof hole:
+```text
+{lean_goal}
+```
+
 Target theorem:
 ```lean4
 {task}
 ```
 
-Your answer has already been started at the exact proof-hole indentation. Continue it
-with the Lean tactic that replaces `sorry`. Put the tactic first; do not restart the
+Your answer's Lean code block has already been started at the proof-hole indentation.
+Continue it with the Lean tactic that replaces `sorry`. Put the tactic first; do not restart the
 theorem and do not write a proof plan, Markdown, declarations, `sorry`, `admit`, or
 `axiom`. Prefer the shortest sufficient tactic. In particular, include only simp lemmas
 that are necessary for this goal. The completed original theorem will be checked by Lean.
@@ -908,11 +992,17 @@ class TransformersRunner:
         cache_dir: Path,
         device_name: str,
         gpu_memory_gib: float,
+        load_in_8bit: bool,
     ) -> None:
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
         try:
             import torch
-            from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+            from transformers import (
+                AutoConfig,
+                AutoModelForCausalLM,
+                AutoTokenizer,
+                BitsAndBytesConfig,
+            )
         except ImportError as error:
             raise ProofError(
                 "Transformers backend dependencies are missing. Run the documented "
@@ -942,6 +1032,9 @@ class TransformersRunner:
         self.torch = torch
         self.device = torch.device(device_name)
         self.gpu_memory_gib = gpu_memory_gib
+        self.load_in_8bit = load_in_8bit
+        if load_in_8bit and self.device.type != "cuda":
+            raise ProofError("--load-in-8bit currently requires --device cuda.")
         model_max_memory: dict[int | str, int] | None = None
         device_map: str | None = None
         config = AutoConfig.from_pretrained(
@@ -975,9 +1068,13 @@ class TransformersRunner:
             model_max_memory = {0: model_gpu_bytes, "cpu": 64 * 2**30}
             device_map = "auto"
             model_dtype = (
-                torch.bfloat16
-                if torch.cuda.is_bf16_supported()
-                else torch.float16
+                torch.float16
+                if load_in_8bit
+                else (
+                    torch.bfloat16
+                    if torch.cuda.is_bf16_supported()
+                    else torch.float16
+                )
             )
         elif self.device.type == "mps":
             model_dtype = torch.float16
@@ -989,10 +1086,15 @@ class TransformersRunner:
                 else torch.float32
             )
         self.model_dtype = model_dtype
+        quantization_config = (
+            BitsAndBytesConfig(load_in_8bit=True) if load_in_8bit else None
+        )
+        quantization_label = "8-bit" if load_in_8bit else "none"
         load_started = time.perf_counter()
         print(
             f"Transformers device: requested={requested_device}, "
             f"resolved={self.device}, dtype={model_dtype}, "
+            f"quantization={quantization_label}, "
             f"gpu_memory_limit={gpu_memory_gib:g} GiB",
             flush=True,
         )
@@ -1015,12 +1117,23 @@ class TransformersRunner:
             trust_remote_code=True,
             device_map=device_map,
             max_memory=model_max_memory,
+            quantization_config=quantization_config,
         )
         if device_map is None:
             self.model.to(self.device)
         self.model.eval()
+        placements: dict[str, int] = {}
+        for placement in getattr(self.model, "hf_device_map", {}).values():
+            label = f"cuda:{placement}" if isinstance(placement, int) else str(placement)
+            placements[label] = placements.get(label, 0) + 1
+        self.device_placements = placements
         self.load_seconds = elapsed_seconds(load_started)
         print(f"Transformers model loaded in {self.load_seconds:.3f}s.", flush=True)
+        if placements:
+            summary = ", ".join(
+                f"{placement}={count}" for placement, count in sorted(placements.items())
+            )
+            print(f"Transformers device map: {summary}.", flush=True)
 
     def generate(
         self,
@@ -1056,22 +1169,31 @@ class TransformersRunner:
         except RuntimeError as error:
             message = str(error)
             if "out of memory" in message.lower():
+                if self.device.type == "cuda":
+                    self.torch.cuda.empty_cache()
                 raise ProofError(
                     f"Transformers ran out of memory on {self.device}. Reduce the "
                     "model size or token limits, or use a quantized Ollama model."
                 ) from error
             raise ProofError(f"Transformers generation failed: {message}") from error
-        generated_tokens = outputs[0, inputs.shape[-1] :]
+        prompt_token_count = int(inputs.shape[-1])
+        generated_tokens = outputs[0, prompt_token_count:]
+        generated_token_count = int(generated_tokens.shape[-1])
         generated = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+        del generated_tokens, outputs, inputs, encoded
+        if self.device.type == "cuda":
+            self.torch.cuda.empty_cache()
         return generated, {
             "backend": "transformers",
             "device": str(self.device),
             "requested_device": self.requested_device,
             "dtype": str(self.model_dtype),
+            "quantization": "8-bit" if self.load_in_8bit else "none",
+            "device_placements": self.device_placements,
             "gpu_memory_limit_gib": self.gpu_memory_gib,
             "load_seconds": self.load_seconds,
-            "prompt_eval_count": int(inputs.shape[-1]),
-            "eval_count": int(generated_tokens.shape[-1]),
+            "prompt_eval_count": prompt_token_count,
+            "eval_count": generated_token_count,
             "generation_timeout_seconds": timeout,
             "total_duration_seconds": elapsed_seconds(started),
         }
@@ -1225,6 +1347,24 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--load-in-8bit",
+        action="store_true",
+        help=(
+            "Quantize Transformers linear layers to 8-bit with bitsandbytes so "
+            "larger models can remain on CUDA instead of being offloaded to CPU."
+        ),
+    )
+    parser.add_argument(
+        "--no-minimize",
+        dest="minimize",
+        action="store_false",
+        default=True,
+        help=(
+            "Save the first Lean-verified candidate without running additional "
+            "simp-argument and goal-bullet minimization checks."
+        ),
+    )
+    parser.add_argument(
         "--model",
         default=os.environ.get("AI_PROOF_MODEL"),
     )
@@ -1238,12 +1378,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Prompt and response protocol; auto selects DeepSeek-Prover by model name.",
     )
     parser.add_argument("--template", type=Path, default=DEFAULT_TEMPLATE)
-    parser.add_argument(
-        "--deepseek-task",
-        type=Path,
-        default=DEFAULT_DEEPSEEK_TASK,
-        help="Standalone local-goal template used by the DeepSeek-Prover prompt mode.",
-    )
     parser.add_argument("--completion", type=Path, default=DEFAULT_COMPLETION)
     parser.add_argument(
         "--comparison",
@@ -1480,27 +1614,32 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "DeepSeek-Prover prompt mode does not use --json-schema; "
                     "remove that option."
                 )
-            deepseek_task = read_text(args.deepseek_task, "DeepSeek local-goal template")
-            logger.record["inputs"]["deepseek_task"] = {
-                "path": relative_to_root(args.deepseek_task),
-                "sha256": sha256_text(deepseek_task),
-                "characters": len(deepseek_task),
+            goal_inspection_started = time.perf_counter()
+            lean_goal = inspect_lean_goal(
+                template, output_path.parent, args.timeout, output_path
+            )
+            logger.record["inputs"]["lean_goal"] = {
+                "sha256": sha256_text(lean_goal),
+                "characters": len(lean_goal),
+                "inspection_seconds": elapsed_seconds(goal_inspection_started),
             }
             if args.backend == "transformers":
                 base_prompt, assistant_prefix = build_transformers_prefill_prompt(
-                    deepseek_task,
+                    template,
                     contexts,
                     args.forbid_identifier,
                     args.instruction,
+                    lean_goal,
                 )
                 normalize_model_output = extract_prefilled_completion
                 repair_model_prompt = repair_prefilled_prompt
             else:
                 base_prompt = build_deepseek_prompt(
-                    deepseek_task,
+                    template,
                     contexts,
                     args.forbid_identifier,
                     args.instruction,
+                    lean_goal,
                 )
                 normalize_model_output = extract_deepseek_completion
                 repair_model_prompt = repair_deepseek_prompt
@@ -1544,6 +1683,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             args.transformers_cache,
                             args.device,
                             args.gpu_memory_gib,
+                            args.load_in_8bit,
                         )
                         logger.record["configuration"]["resolved_device"] = str(
                             transformers_runner.device
@@ -1637,7 +1777,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if passed:
                 attempt_record["extracted_passing_candidate"] = extracted_candidate
                 minimization_steps: list[dict[str, Any]] = []
-                while True:
+                while args.minimize:
                     minimized_completion, removed_arguments = (
                         minimize_simple_simp_completion(completion, diagnostics)
                     )
@@ -1668,7 +1808,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 # The linter only reports arguments that were unused in the current
                 # combination. Greedily test the remaining arguments as well, since a
                 # proof can still work after removing an argument that the linter used.
-                while True:
+                required_simp_arguments: set[str] = set()
+                while args.minimize:
                     simple_match = SIMPLE_SIMP_PATTERN.fullmatch(completion.strip())
                     if simple_match is None:
                         break
@@ -1681,6 +1822,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     # usually put the goal-specific lemmas first and generic fallback
                     # rewrites at the end.
                     for argument in reversed(remaining_arguments):
+                        if argument in required_simp_arguments:
+                            continue
                         trial_completion = remove_simple_simp_argument(
                             completion, argument
                         )
@@ -1709,6 +1852,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             attempt_record["completion"] = completion
                             accepted_removal = True
                             break
+                        required_simp_arguments.add(argument)
                     if not accepted_removal:
                         break
                 if minimization_steps:
@@ -1717,7 +1861,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "final_completion": completion,
                     }
                 bulletless_completion = remove_leading_goal_bullet(completion)
-                if bulletless_completion != completion:
+                if args.minimize and bulletless_completion != completion:
                     bulletless_generated = assemble(template, bulletless_completion)
                     bulletless_passed, bulletless_diagnostics = verify_lean(
                         bulletless_generated,
@@ -1752,7 +1896,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(raw)
                 print("Extracted passing candidate:")
                 print(extracted_candidate)
-                print("Minimized verified completion:")
+                print(
+                    "Minimized verified completion:"
+                    if args.minimize
+                    else "Verified completion (minimization disabled):"
+                )
                 print(completion)
                 print(f"Completion: {relative_to_root(completion_path)}")
                 if args.comparison is not None:

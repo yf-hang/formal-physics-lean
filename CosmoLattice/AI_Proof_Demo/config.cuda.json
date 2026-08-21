@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "backend": "transformers",
-  "device": "cpu",
-  "gpu_memory_gib": 8,
-  "load_in_8bit": false,
+  "device": "cuda",
+  "gpu_memory_gib": 10,
+  "load_in_8bit": true,
   "model": "deepseek-ai/DeepSeek-Prover-V2-7B",
   "prompt_mode": "auto",
   "template": "AI_Proof_Demo/PartialProof.lean.template",

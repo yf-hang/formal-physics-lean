@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Y. Hang
 -/
 
-import Mathlib
+import Mathlib.Algebra.BigOperators.Group.List.Basic
+import Mathlib.Data.List.Sublists
+import Mathlib.Tactic.Ring
 
 /-!
 # Finite-difference expansion
